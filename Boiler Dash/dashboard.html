@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Boiler Monitor</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+    }
+    .card {
+      display: inline-block;
+      background: #1e293b;
+      padding: 20px;
+      margin: 10px;
+      border-radius: 10px;
+      width: 200px;
+      font-size: 20px;
+    }
+    .status {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Smart Boiler Monitoring System</h2>
+<div id="location"></div>
+
+<div class="card">Temperature<br><span id="temp">--</span> °C</div>
+<div class="card">Pressure<br><span id="press">--</span> bar</div>
+<div class="card">Flow<br><span id="flow">--</span> L/s</div>
+
+<div class="status" id="status">Connecting...</div>
+
+<script>
+  const client = mqtt.connect(
+    "wss://094819d2e9f64c24aad18cf71f8fbdc6.s1.eu.hivemq.cloud:8884/mqtt",
+    {
+      username: "Johnny",
+      password: "Johnny123456"
+    }
+  );
+
+  client.on("connect", () => {
+    document.getElementById("status").innerText = "Connected";
+    client.subscribe("boiler/#");
+  });
+
+  let lastSeen = Date.now();
+setInterval(() => {
+  if (Date.now() - lastSeen > 10000) {
+    document.getElementById("status").innerText = "DEVICE OFFLINE";
+  }
+}, 1000);
+
+  client.on("message", (topic, message) => {
+  lastSeen = Date.now();   // <-- THIS WAS MISSING
+
+  const data = JSON.parse(message.toString());
+
+  document.getElementById("temp").innerText = data.temperature;
+  document.getElementById("press").innerText = data.pressure;
+  document.getElementById("flow").innerText = data.flow;
+
+  document.getElementById("location").innerText =
+    data.state + " > " +
+    data.district + " > " +
+    data.company + " > " +
+    data.boiler_id;
+
+  let status = "NORMAL";
+  if (data.pressure > 8 || data.temperature > 220) status = "DANGER";
+  else if (data.pressure > 6 || data.temperature > 200) status = "WARNING";
+
+  document.getElementById("status").innerText = "Status: " + status;
+});
+
+</script>
+
+</body>
+</html>
